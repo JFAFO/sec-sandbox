@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import sysconfig
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
@@ -66,8 +67,31 @@ def main(
         print(INTERNAL_ERROR, file=sys.stderr)
         return 127
 
+    _prepare_sandbox_env()
     execv(plan.argv[0], list(plan.argv))
     return 127
+
+
+def _prepare_sandbox_env() -> None:
+    """让 bwrap 内的 ``safe-exec`` 使用当前 venv 的解释器与依赖。
+
+    ``safe-exec`` 以 ``#!/usr/bin/env python3`` 启动；若 bwrap 内 PATH 只有
+    系统目录，它会找到系统 Python，而项目只安装在 ``.venv`` 中，导致
+    ``ModuleNotFoundError``。这里把 venv 的 bin、项目 src 与 venv 的
+    site-packages 注入环境，bwrap 会继承这些变量。
+    """
+    venv_bin = Path(sys.executable).parent
+    path_parts = [part for part in os.environ.get("PATH", "").split(os.pathsep) if part]
+    if str(venv_bin) not in path_parts:
+        os.environ["PATH"] = os.pathsep.join([str(venv_bin), *path_parts])
+
+    project_src = Path(__file__).resolve().parents[2]
+    purelib = sysconfig.get_paths()["purelib"]
+    pythonpath = [str(project_src), purelib]
+    existing = os.environ.get("PYTHONPATH", "")
+    if existing:
+        pythonpath.append(existing)
+    os.environ["PYTHONPATH"] = os.pathsep.join(part for part in pythonpath if part)
 
 
 def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace | None:

@@ -319,13 +319,18 @@ fi
 
 apt_install "${BASE_PKGS[@]}"
 
-# 真 bash 备份：外层 bwrap 需要把 real-bash 绑定到已存在的目标文件
+# 真 bash 备份：外层 bwrap 需要把 real-bash 绑定到已存在的普通文件。
+# bwrap 0.6.1 不支持 --ro-bind 的目标指向符号链接（会报 No such file or directory），
+# 因此这里用副本而不是 ln -s。
 REAL_BASH_TARGET="/usr/bin/real-bash"
+if [ -L "$REAL_BASH_TARGET" ]; then
+    $SUDO rm -f "$REAL_BASH_TARGET"
+fi
 if [ ! -e "$REAL_BASH_TARGET" ]; then
     # 不能命名为 BASH_SOURCE：它是 bash 的只读特殊变量，赋值会让 set -e 静默退出。
     BASH_REAL="$(readlink -f /usr/bin/bash 2>/dev/null || readlink -f /bin/bash)"
-    $SUDO ln -s "$BASH_REAL" "$REAL_BASH_TARGET"
-    ok "已创建真 bash 备份：$REAL_BASH_TARGET -> $BASH_REAL"
+    $SUDO cp --preserve=mode -- "$BASH_REAL" "$REAL_BASH_TARGET"
+    ok "已创建真 bash 备份：$REAL_BASH_TARGET（普通文件）"
 else
     ok "真 bash 备份已存在：$REAL_BASH_TARGET"
 fi

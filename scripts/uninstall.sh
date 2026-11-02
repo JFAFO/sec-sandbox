@@ -149,11 +149,23 @@ plan_real_bash() {
         return 0
     fi
 
-    local resolved bash_real
-    resolved="$(readlink -f -- "$path" 2>/dev/null || true)"
+    local resolved bash_real magic
     bash_real="$(readlink -f -- /bin/bash 2>/dev/null || readlink -f -- /usr/bin/bash 2>/dev/null || true)"
-    if [ "$resolved" != "$bash_real" ] && [ "$FORCE" -ne 1 ]; then
-        warn "$path 不指向系统 bash（解析：${resolved:-无法解析}），已跳过；确认可删时加 --force"
+    if [ -L "$path" ]; then
+        resolved="$(readlink -f -- "$path" 2>/dev/null || true)"
+        if [ "$resolved" != "$bash_real" ] && [ "$FORCE" -ne 1 ]; then
+            warn "$path 不指向系统 bash（解析：${resolved:-无法解析}），已跳过；确认可删时加 --force"
+            return 0
+        fi
+    elif [ -f "$path" ] && [ -x "$path" ]; then
+        # setup.sh 现在创建的是普通副本；只接受 ELF，避免误删任意脚本。
+        magic="$(head -c 4 -- "$path" 2>/dev/null | od -An -tx1 | tr -d ' \n')"
+        if [ "$magic" != "7f454c46" ] && [ "$FORCE" -ne 1 ]; then
+            warn "$path 不指向系统 bash（非 ELF 副本），已跳过；确认可删时加 --force"
+            return 0
+        fi
+    elif [ "$FORCE" -ne 1 ]; then
+        warn "$path 不指向系统 bash（不是可执行副本），已跳过；确认可删时加 --force"
         return 0
     fi
 

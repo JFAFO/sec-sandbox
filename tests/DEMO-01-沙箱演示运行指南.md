@@ -376,7 +376,7 @@ sudo bash scripts/setup.sh --mode vm --project-dir "$PWD"
 
 | 现象 | 处理 |
 | --- | --- |
-| `sandbox` 启动报 `real-bash` 不存在 | 重新执行 `setup.sh --mode vm`，或手工 `sudo ln -s /usr/bin/bash /usr/bin/real-bash` |
+| `sandbox` 启动报 `real-bash` 不存在 | 重新执行 `setup.sh --mode vm`，或手工 `sudo cp --preserve=mode /usr/bin/bash /usr/bin/real-bash`；不要用 `ln -s`，bwrap 0.6.1 不支持符号链接目标 |
 | `claude` / `mini` 找不到 | 使用 `~/.local/bin/claude`、`~/.local/bin/mini`，或把 `~/.local/bin` 加入 PATH |
 | TUI 显示不全 | 终端至少 100×30；或使用 `--no-tui` 配合已有 profile |
 | Agent 没有生成危险命令 | 换一条提示词重试；Agent 可能拒绝或改写任务 |

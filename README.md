@@ -44,7 +44,8 @@ bin/sandbox --profile ~/.config/sandbox/profile.json
 SECSAND_PROFILE=~/.config/sandbox/profile.json bin/safe-exec -c 'ls'
 ```
 
-`setup.sh` 安装模式会创建 `/usr/bin/real-bash`（真 bash 备份），这是外层 bwrap 的部署前提。
+`setup.sh` 安装模式会创建 `/usr/bin/real-bash`（真 bash 的普通副本，不是符号链接；
+bwrap 0.6.1 要求 `--ro-bind` 目标是普通文件），这是外层 bwrap 的部署前提。
 
 ## 卸载
 
