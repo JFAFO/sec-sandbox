@@ -46,6 +46,22 @@ SECSAND_PROFILE=~/.config/sandbox/profile.json bin/safe-exec -c 'ls'
 
 `setup.sh` 安装模式会创建 `/usr/bin/real-bash`（真 bash 备份），这是外层 bwrap 的部署前提。
 
+## 卸载
+
+```bash
+# 先看会删除什么（不实际删除）
+./scripts/uninstall.sh --dry-run
+
+# 交互确认后卸载部署产物（profile、审计状态、.venv、构建缓存、/usr/bin/real-bash）
+./scripts/uninstall.sh
+
+# 额外卸载系统包 bubblewrap，并保留配置与审计日志
+./scripts/uninstall.sh --yes --purge --keep-state
+```
+
+默认不删除项目源码、系统 bash 与通用系统工具；需要特权时脚本内部调用 `sudo`，
+因此请以普通用户运行，不要整体 `sudo ./scripts/uninstall.sh`。
+
 ## 测试
 
 ```bash
@@ -58,7 +74,7 @@ pytest tests/e2e         # 恶意/正常用例集与指标
 
 - `src/sec_sandbox/`：源码（`contracts`、`policy`、`bash_audit`、`python_audit`、`netpolicy`、`gateway`、`sandbox`、`frontend`）
 - `tests/`：单元、集成、内核与端到端测试
-- `scripts/`：安装、自检与 VM 辅助脚本
+- `scripts/`：安装、卸载、自检、演示与 VM 辅助脚本
 - `etc/`：profile schema 与预设
 
 ## 安全边界
