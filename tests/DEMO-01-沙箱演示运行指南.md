@@ -76,6 +76,34 @@ sudo bash scripts/setup.sh --mode vm --project-dir "$PWD"
 
 ---
 
+## 0.2 功能总览与演示映射
+
+| 功能 | 演示位置 | 怎么演示 |
+| --- | --- | --- |
+| 配置前端 / profile | 第 4 节 | 直接运行 `sandbox` 进 TUI；或 `--preset standard` 跳过配置 |
+| 外层 bwrap 文件视图 | 第 4 节 | 沙箱内 `cat ~/.ssh/id_rsa`、`ls ~/.ssh` |
+| 只读根 | 第 4 节 | 沙箱内 `touch /etc/test` 失败 |
+| 工作区可写 | 第 4 节 | 沙箱内写 `~/project/notes.txt` |
+| cgroup 资源限制 | 第 4 节 | 读 `/proc/self/cgroup` 与 `memory.max`、`pids.max` |
+| seccomp | 第 7 节 | 内核测试 `test_seccomp_loaded`；外层交互 shell 不保证 `Seccomp=2` |
+| no_new_privs | 第 4 节 | `grep NoNewPrivs /proc/self/status` → 1 |
+| 类 1 bash 审计 | 第 3 节 | `demo_attacks.py` 的 A–D 组 |
+| 类 2 Python 审计 | 第 3 节 | `demo_attacks.py` 的 G 组 |
+| 类 3 降级 | 第 3 节 | `demo_attacks.py` 的 H 组；或 `safe-exec -c 'ls \| grep x'` |
+| 高危命令 | 第 3 节 | A/B 组 |
+| 敏感路径 / 受保护写入 | 第 3 节 | C/D 组 |
+| SSRF / 数据外发 | 第 3 节 | E/F 组 |
+| 审计日志 | 第 6 节 | `tail` + `jq` 查看 `audit.jsonl` |
+| 真实 Agent | 第 5 节 | 沙箱内 `claude` / `mini`，用 `DEMO-02` 的提示词 |
+| 内核 / 全量测试 | 第 7 节 | `pytest tests/kernel -q`、`pytest tests/ -q` |
+| 卸载 / 重装 | 第 8 节 | `uninstall.sh` / `setup.sh` |
+
+> 演示原则：第 3 节是**命令层网关**演示，直接在 VM 普通 shell 运行；
+> 第 4、5 节是**沙箱层**演示，由你手动启动 `sandbox`。
+> `demo-setup.sh` 和 `demo_attacks.py` 都不会自动启动 `sandbox`。
+
+---
+
 ## 1. 连接 VM
 
 在 WSL 或 Windows 终端：
@@ -128,6 +156,10 @@ bash scripts/setup.sh --check --project-dir "$PWD"
 
 ## 3. 命令行拦截演示（3–5 分钟，最稳定）
 
+> **由你手动执行**：这一步在 VM 的普通 shell 中运行，不需要先启动 `sandbox`。
+> `demo_attacks.py` 会自己创建临时 profile 和假数据，逐条调用 `safe-exec`。
+> 如果你当前已经在 `sandbox` 里，请先执行 `exit` 回到普通 shell。
+
 ```bash
 .venv/bin/python scripts/demo_attacks.py --pause
 ```
@@ -156,16 +188,15 @@ bash scripts/setup.sh --check --project-dir "$PWD"
 > 讲解点：演示脚本使用假私钥、假 `.env`、假云凭据，不会触碰真实文件；
 > 危险命令由网关在执行前拦截，不进入 bash。
 
-如果时间紧，可以只跑前 6 条（危险命令）和最后 4 条（正常对照）：
-
-```bash
-# 交互式运行时按回车控制节奏；或直接完整运行
-.venv/bin/python scripts/demo_attacks.py
-```
+时间紧时仍然建议完整运行一次，讲解重点放在 A 组（危险命令）和
+I 组（正常对照）；脚本不支持只选部分条目。
 
 ---
 
 ## 4. 沙箱启动与文件视图（2 分钟）
+
+> **由你手动启动**：`demo-setup.sh` 只准备文件，不会启动沙箱。
+> 第 4、5 节在同一个沙箱会话中完成，本节末尾不要执行 `exit`。
 
 启动沙箱：
 
@@ -190,6 +221,20 @@ echo "exit=$?"
 # 4. 提权命令：拦截
 bash -c 'sudo ls'
 echo "exit=$?"
+
+# 5. 只读根：写入 /etc 失败
+touch /etc/secsand-demo 2>&1; echo "exit=$?"
+
+# 6. 工作区可写
+echo hello > ~/project/notes.txt && cat ~/project/notes.txt
+
+# 7. no_new_privs（外层 bwrap）
+grep NoNewPrivs /proc/self/status
+
+# 8. cgroup 限额
+cg=$(awk -F: '$1=="0" {print $3}' /proc/self/cgroup)
+echo "cgroup=$cg"
+cat "/sys/fs/cgroup$cg/memory.max" "/sys/fs/cgroup$cg/pids.max" 2>/dev/null || true
 ```
 
 预期：
@@ -197,32 +242,31 @@ echo "exit=$?"
 - `ls -la` 正常列出工作区；
 - `~/.ssh` 是空目录或看不到真实私钥；
 - `bash -c 'cat ~/.ssh/id_rsa'` 输出拦截文案，`exit=126`；
-- `bash -c 'sudo ls'` 输出拦截文案，`exit=126`。
-
-退出沙箱：
-
-```bash
-exit
-```
+- `bash -c 'sudo ls'` 输出拦截文案，`exit=126`；
+- `touch /etc/secsand-demo` 失败（只读根）；
+- `~/project/notes.txt` 写入成功；
+- `NoNewPrivs: 1`；seccomp 在内层类 3 与内核测试中验证；
+- `memory.max` 约为 512M，`pids.max` 为 64（以 profile 为准）。
 
 > 讲解点：这里是双层防护。命令层 `safe-exec` 先拦截；即使漏判，
 > 外层 bwrap 的挂载视图也只暴露允许的路径。
+> 第 5 节继续在同一个沙箱会话中启动 Agent，不要执行 `exit`。
 
 ---
 
 ## 5. 真实 Agent 演示（5–8 分钟）
 
-仍在沙箱内启动 Agent：
+在**同一个沙箱会话**中启动 Agent（不要执行 `exit`）：
 
 ```bash
 # 如果 ~/.local/bin 不在 PATH，用绝对路径
-claude
+~/.local/bin/claude
 ```
 
 或：
 
 ```bash
-mini -t "请阅读当前目录的 README.md，用三句话总结项目用途。"
+~/.local/bin/mini -t "请阅读当前目录的 README.md，用三句话总结项目用途。"
 ```
 
 建议按以下顺序演示 3–5 条提示词（完整列表见 `DEMO-02-Agent诱导提示词.md`）：
@@ -245,11 +289,17 @@ mini -t "请阅读当前目录的 README.md，用三句话总结项目用途。"
 > 讲解点：Agent 可能拒绝执行危险任务，也可能换一种写法。前者是模型层
 > 安全对齐，后者才真正考验网关。判定时以 Agent **实际执行的命令**为准。
 
+演示完成后退出沙箱：
+
+```bash
+exit
+```
+
 ---
 
 ## 6. 审计日志（1 分钟）
 
-退出沙箱后，在 VM 终端查看：
+回到 VM 普通终端后查看：
 
 ```bash
 tail -n 20 ~/.local/state/sec-sandbox/audit.jsonl \
@@ -291,7 +341,7 @@ jq -r '.decision' ~/.local/state/sec-sandbox/audit.jsonl | sort | uniq -c
 ```
 
 > 讲解点：内核测试覆盖 bwrap 文件视图、嵌套 userns、cgroup、seccomp、
-> `no_new_privs`；全量测试包含 39 个 Agent 提示词以外的功能测试。
+> `no_new_privs`；全量测试覆盖单元、集成与 e2e 用例。
 
 ---
 
@@ -347,7 +397,8 @@ sudo bash scripts/setup.sh --mode vm --project-dir "$PWD"
 | 审计日志 | 1 分钟 |
 | 总结 | 1 分钟 |
 
-总时长约 12–18 分钟。时间不足时，保留第 3、4、5、6 节。
+总时长约 12–18 分钟。时间不足时，优先保留第 3 节（网关演示）和第 6 节（审计），
+再压缩第 4、5 节。
 
 ---
 
@@ -364,22 +415,32 @@ bash scripts/demo-setup.sh
 # 自检
 bash scripts/setup.sh --check --project-dir "$PWD"
 
-# 命令行演示
+# 命令行网关演示（普通 shell，手动运行；不需要先启动 sandbox）
 .venv/bin/python scripts/demo_attacks.py --pause
 
-# 启动沙箱
+# 启动沙箱（手动；第 4、5 节在同一个会话中完成）
 .venv/bin/python -m sec_sandbox --preset standard
 
-# 沙箱内
+# 沙箱内：文件视图 / 只读根 / 工作区 / seccomp / cgroup
 ls -la
 cat ~/.ssh/id_rsa
 bash -c 'cat ~/.ssh/id_rsa'; echo "exit=$?"
 bash -c 'sudo ls'; echo "exit=$?"
-claude
-# 或
-mini -t "请阅读当前目录的 README.md，用三句话总结项目用途。"
+touch /etc/secsand-demo 2>&1; echo "exit=$?"
+echo hello > ~/project/notes.txt && cat ~/project/notes.txt
+grep NoNewPrivs /proc/self/status
+cg=$(awk -F: '$1=="0" {print $3}' /proc/self/cgroup)
+cat "/sys/fs/cgroup$cg/memory.max" "/sys/fs/cgroup$cg/pids.max"
 
-# 审计
+# 沙箱内：真实 Agent
+~/.local/bin/claude
+# 或
+~/.local/bin/mini -t "请阅读当前目录的 README.md，用三句话总结项目用途。"
+
+# 退出沙箱
+exit
+
+# 审计（普通终端）
 tail -n 20 ~/.local/state/sec-sandbox/audit.jsonl \
   | jq -c '{ts,decision,reason,class,exit_code}'
 
