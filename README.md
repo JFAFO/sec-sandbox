@@ -132,3 +132,9 @@ Project sources, the system bash, and common system tools are not removed by def
 本项目只拦截经过 `safe-exec` 网关的命令；Agent 的文件工具直接访问挂载视图，只受外层 bwrap 的读写范围约束。MCP 工具的任意行为、Agent 本体上传上下文、经“人”或侧信道的外发，以及 DNS 解析后指向内网等残余风险，不在完整防护范围内。
 
 This project only intercepts commands that pass through the `safe-exec` gateway; an agent's file tools access the mount view directly and are constrained only by the outer bwrap's read/write scope. Arbitrary MCP tool behavior, agent context uploads, exfiltration through humans or side channels, and DNS rebinding to internal networks are outside the full protection scope.
+
+## 许可证 / License
+
+本项目采用 MIT 许可证，Copyright (c) 2026 sec-sandbox contributors，完整条款见 [`LICENSE`](LICENSE)。
+
+This project is licensed under the MIT License, Copyright (c) 2026 sec-sandbox contributors; see [`LICENSE`](LICENSE) for the full text.
