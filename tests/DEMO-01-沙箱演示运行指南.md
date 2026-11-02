@@ -21,25 +21,23 @@ cd ~/Desktop/project
 bash scripts/demo-setup.sh
 ```
 
-脚本会依次完成：
+脚本只做两件事：
 
 1. 检查/安装基础环境（调用 `scripts/setup.sh --mode vm`，需要 sudo 密码）；
-2. 把 `~/.local/bin` 加入 PATH；
-3. 安装 Claude Code；
-4. 安装 Mini SWE Agent；
-5. 创建演示工作区 `~/project` 和假数据；
-6. 生成 `~/.config/sandbox/profile.json`（workspace = `~/project`）。
+2. 创建演示工作区 `~/project` 和假数据。
+
+两个 Agent（Claude Code / Mini SWE Agent）由使用者自行安装，脚本不处理；
+脚本也不改 PATH、不写 profile。`sandbox --preset standard` 的默认 workspace
+就是 `~/project`，所以无需额外配置。
 
 常用选项：
 
 ```bash
-bash scripts/demo-setup.sh --skip-base       # 基础环境已就绪
-bash scripts/demo-setup.sh --skip-agents     # 只准备环境
-bash scripts/demo-setup.sh --force-profile   # 覆盖已有 profile
-bash scripts/demo-setup.sh --dry-run         # 只预览
+bash scripts/demo-setup.sh --skip-base   # 基础环境已就绪
+bash scripts/demo-setup.sh --dry-run     # 只预览
 ```
 
-脚本幂等：已存在的 venv、Agent、工作区文件和 profile 默认不覆盖。
+脚本幂等：已存在的 venv 和工作区文件默认不覆盖。
 
 ---
 
