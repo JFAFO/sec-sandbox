@@ -7,10 +7,43 @@
 > 生产环境执行其中的危险命令。
 >
 > 配套提示词见 [`DEMO-02-Agent诱导提示词.md`](DEMO-02-Agent诱导提示词.md)。
+>
+> **执行位置**：本文件所有命令都在目标 VM 内部执行，不通过 WSL 的 SSH 远程调用。
 
 ---
 
-## 0. 演示前检查清单
+## 0. 一键搭建（推荐）
+
+首次演示或重装后，在 VM 内部执行：
+
+```bash
+cd ~/Desktop/project
+bash scripts/demo-setup.sh
+```
+
+脚本会依次完成：
+
+1. 检查/安装基础环境（调用 `scripts/setup.sh --mode vm`，需要 sudo 密码）；
+2. 把 `~/.local/bin` 加入 PATH；
+3. 安装 Claude Code；
+4. 安装 Mini SWE Agent；
+5. 创建演示工作区 `~/project` 和假数据；
+6. 生成 `~/.config/sandbox/profile.json`（workspace = `~/project`）。
+
+常用选项：
+
+```bash
+bash scripts/demo-setup.sh --skip-base       # 基础环境已就绪
+bash scripts/demo-setup.sh --skip-agents     # 只准备环境
+bash scripts/demo-setup.sh --force-profile   # 覆盖已有 profile
+bash scripts/demo-setup.sh --dry-run         # 只预览
+```
+
+脚本幂等：已存在的 venv、Agent、工作区文件和 profile 默认不覆盖。
+
+---
+
+## 0.1 手工检查清单（可选）
 
 在 VM 的桌面终端里先确认：
 
@@ -326,6 +359,9 @@ sudo bash scripts/setup.sh --mode vm --project-dir "$PWD"
 # 连接
 ssh sandbox-dev@192.168.22.133
 cd ~/Desktop/project
+
+# 一键搭建（首次/重装后）
+bash scripts/demo-setup.sh
 
 # 自检
 bash scripts/setup.sh --check --project-dir "$PWD"
