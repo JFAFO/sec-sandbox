@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..util.paths import canonicalize
+from ..util.paths import canonicalize, is_under
 from .models import (
     AuditConfig,
     BashConfig,
@@ -310,7 +310,7 @@ def _inner(collector: _Collector, data: Mapping[str, Any]) -> InnerConfig:
 def _audit(collector: _Collector, data: Mapping[str, Any]) -> AuditConfig:
     section = _mapping(collector, data, "audit", "", _AUDIT_KEYS)
     log_dir = _path_field(collector, section, "log_dir", "audit")
-    if log_dir is not None and not _is_under(
+    if log_dir is not None and not is_under(
         log_dir, canonicalize("$HOME/.local/state")
     ):
         # 防止用 profile 自身的 log_dir 为任意写白名单自我授权（§8.3）
@@ -345,16 +345,12 @@ def _check_write_whitelist(
     for index, path in enumerate(write_whitelist):
         if path in runtime_required:
             continue
-        if workspace is not None and _is_under(path, workspace):
+        if workspace is not None and is_under(path, workspace):
             continue
         collector.error(
             f"filesystem.write_whitelist[{index}]",
             "必须是 workspace 的子路径或运行必需目录（~/.claude、~/.claude.json、审计目录）",
         )
-
-
-def _is_under(path: Path, root: Path) -> bool:
-    return path == root or root in path.parents
 
 
 def _mapping(

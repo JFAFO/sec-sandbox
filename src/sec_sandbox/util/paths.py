@@ -66,6 +66,13 @@ def is_sensitive_path(path: str | os.PathLike[str], patterns: Iterable[str]) -> 
     return match_sensitive_pattern(path, patterns) is not None
 
 
+def is_under(path: str | os.PathLike[str], root: str | os.PathLike[str]) -> bool:
+    """``path`` 是否等于 ``root`` 或位于其下（按规范绝对路径比较）。"""
+    candidate = canonicalize(path)
+    base = canonicalize(root)
+    return candidate == base or base in candidate.parents
+
+
 def _expand_pattern(pattern: str) -> str:
     """只展开模式中的 ``~``/``$HOME`` 前缀，允许相对 glob。"""
     if pattern == _HOME_PREFIX or pattern.startswith(_HOME_PREFIX + "/"):

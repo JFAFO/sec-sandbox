@@ -11,6 +11,7 @@ from sec_sandbox.util.paths import (
     canonicalize,
     expand_path,
     is_sensitive_path,
+    is_under,
     match_sensitive_pattern,
 )
 
@@ -99,6 +100,16 @@ def test_symlink_bypass_is_blocked(tmp_path):
 
     pattern = str(secret_dir / "*")
     assert is_sensitive_path(str(innocent), (pattern,))
+
+
+def test_is_under(tmp_path):
+    base = tmp_path / "base"
+    child = base / "a" / "b"
+    child.mkdir(parents=True)
+
+    assert is_under(child, base)
+    assert is_under(base, base)
+    assert not is_under(tmp_path / "other", base)
 
 
 def test_match_returns_first_hit():

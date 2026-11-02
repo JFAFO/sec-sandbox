@@ -67,7 +67,7 @@ class BashAnalysis:
     """M2 的完整分析结果。"""
 
     shape: CommandShape
-    verdict: AuditVerdict  # shape != SIMPLE 时固定为 DOWNGRADE
+    verdict: AuditVerdict  # Deny 规则优先；否则 shape != SIMPLE 时为 DOWNGRADE
 
 
 @dataclass(frozen=True)

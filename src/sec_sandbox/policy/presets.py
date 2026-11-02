@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
+from .builtin.whitelist import DEFAULT_UTILITY_WHITELIST
 from .models import Profile
 from .schema import parse_profile
 
@@ -66,24 +67,7 @@ def _base() -> dict[str, Any]:
             "cpu_quota": "50%",
         },
         "bash": {
-            "utility_whitelist": [
-                "ls",
-                "cat",
-                "head",
-                "tail",
-                "grep",
-                "wc",
-                "echo",
-                "printf",
-                "pwd",
-                "cd",
-                "mkdir",
-                "touch",
-                "cp",
-                "mv",
-                "curl",
-                "wget",
-            ],
+            "utility_whitelist": list(DEFAULT_UTILITY_WHITELIST),
             "trusted_path": ["/usr/local/bin", "/usr/bin", "/bin"],
             "allow_scripts": False,
             "max_script_bytes": 1024 * 1024,
