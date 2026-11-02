@@ -82,6 +82,7 @@ def test_string_enum_values_match_design():
     assert InvocationMode.COMMAND_STRING.value == "command_string"
     assert InvocationMode.SCRIPT.value == "script"
     assert InvocationMode.STDIN.value == "stdin"
+    assert InvocationMode.UNKNOWN.value == "unknown"
 
     assert CommandClass.BASH_UTILITY.value == "bash_utility"
     assert CommandClass.PYTHON_SCRIPT.value == "python_script"

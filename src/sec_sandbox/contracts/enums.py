@@ -20,6 +20,7 @@ class InvocationMode(str, Enum):
     COMMAND_STRING = "command_string"  # bash -c "<text>"
     SCRIPT = "script"                  # bash <file>
     STDIN = "stdin"                    # bash -s / 无参 + 非 tty
+    UNKNOWN = "unknown"                # 未知 flag：不猜测，原样交内层沙箱（§4.2）
 
 
 class CommandClass(str, Enum):
