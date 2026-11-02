@@ -136,3 +136,21 @@ def test_allow_requires_trusted_realpath(ctx):
 def test_rule_verdict_has_rule_id(ctx):
     result = analyze("cat ~/.ssh/id_rsa", ctx)
     assert result.verdict.rule_ids == ("B2.SENSITIVE_PATH",)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "cp ~/project/README.md ~/.bashrc",
+        "cp file $HOME/.bashrc",
+        "mv ~/project/README.md ~/.bashrc",
+        "touch ~/.zshrc",
+        "mkdir ~/.config/autostart",
+        "tee ~/.profile",
+    ],
+)
+def test_home_prefixed_write_target_denied(text, ctx):
+    """REVIEW-0015：``~``/``$HOME`` 参数不是静态词，写目标检查不得因此失效。"""
+    result = analyze(text, ctx)
+    assert result.verdict.decision is Decision.DENY
+    assert result.verdict.reason is ReasonCode.DANGEROUS_REDIRECT

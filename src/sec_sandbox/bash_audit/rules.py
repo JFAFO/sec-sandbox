@@ -192,14 +192,21 @@ def _check_write_targets(
     if all_targets is None:
         return None
 
-    argv = command_argv(command)
-    if not argv:
+    # 不能走 command_argv：``~``/``$HOME`` 形式的参数不是静态词，会被整体丢弃，
+    # 导致写目标检查失效（REVIEW-0015）。这里直接取 word 节点的原始文本。
+    words = [
+        part
+        for part in getattr(command, "parts", ())
+        if getattr(part, "kind", None) == "word"
+    ]
+    if len(words) < 2:
         return None
-    targets = argv[1:] if all_targets else argv[-1:]
-    for target in targets:
-        if target.startswith("-"):
+    targets = words[1:] if all_targets else words[-1:]
+    for word in targets:
+        raw = getattr(word, "word", None)
+        if not raw or raw.startswith("-"):
             continue
-        path = _expand_word(target, ctx)
+        path = _expand_word(raw, ctx)
         if path is None:
             continue
         if match_sensitive_pattern(path, rules.dangerous_writes):
