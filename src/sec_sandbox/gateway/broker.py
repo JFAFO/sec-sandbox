@@ -27,7 +27,6 @@ from pathlib import Path
 from ..bash_audit.astutil import command_argv
 from ..bash_audit.parser import parse
 from ..bash_audit.rules import RuleSet, find_deny
-from ..policy.builtin.sensitive_paths import SENSITIVE_PATH_PATTERNS
 from ..contracts import (
     AuditContext,
     AuditVerdict,
@@ -44,6 +43,7 @@ from ..contracts import (
     ParsedBash,
     ReasonCode,
 )
+from ..policy.builtin.sensitive_paths import SENSITIVE_PATH_PATTERNS
 from ..policy.models import Profile
 from ..util import logging as internal_log
 from .audit_log import AuditEvent, AuditLog
@@ -364,11 +364,26 @@ def _parse_request(req: CommandRequest) -> ParsedBash:
 
 def _shell_args(req: CommandRequest) -> tuple[str, ...]:
     """交给 real-bash 的参数（不含 real-bash 自身，§4.6）。"""
+    login = ("-l",) if _login_requested(req.argv) else ()
     if req.mode is InvocationMode.SCRIPT and req.script_path is not None:
-        return (str(req.script_path),)
+        return (*login, str(req.script_path))
     if req.mode is InvocationMode.UNKNOWN:
         return tuple(req.argv)
-    return ("-c", req.command_text or "")
+    return (*login, "-c", req.command_text or "")
+
+
+def _login_requested(argv: tuple[str, ...]) -> bool:
+    """从原始短选项中提取 ``-l``/``--login``，避免丢失登录 shell 语义。"""
+    for arg in argv:
+        if arg in {"--", "-"} or not arg.startswith("-"):
+            break
+        if arg == "--login":
+            return True
+        if not arg.startswith("--") and len(arg) > 1:
+            flags = arg[1:]
+            if "l" in flags and set(flags) <= {"c", "i", "l"}:
+                return True
+    return False
 
 
 def _shell_argv(req: CommandRequest, real_bash: str) -> tuple[str, ...]:

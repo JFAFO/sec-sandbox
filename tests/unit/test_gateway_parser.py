@@ -71,6 +71,39 @@ def test_interactive_flag_with_command_string():
     assert request.command_text == "ls"
 
 
+@pytest.mark.parametrize("flag", ["-l", "-i", "--login", "--interactive"])
+def test_command_string_after_option_flag(flag):
+    # Claude Code 在快照不可用时会生成 ``bash -c -l <command>``。
+    request = parse(["-c", flag, "pwd"])
+
+    assert request.mode is InvocationMode.COMMAND_STRING
+    assert request.command_text == "pwd"
+
+
+@pytest.mark.parametrize("flag", ["-lc", "-cl", "-ilc", "-lic"])
+def test_combined_command_flags(flag):
+    request = parse([flag, "pwd"])
+
+    assert request.mode is InvocationMode.COMMAND_STRING
+    assert request.command_text == "pwd"
+
+
+def test_combined_command_flag_reads_stdin():
+    request = parse(["-lc"], stdin=b"pwd\n")
+
+    assert request.mode is InvocationMode.STDIN
+    assert request.command_text == "pwd\n"
+
+
+def test_combined_command_flag_without_text():
+    with pytest.raises(ParseError):
+        parse(["-lc"], tty=True)
+
+
+def test_unknown_combined_flag_still_unknown():
+    assert parse(["-xc", "ls"]).mode is InvocationMode.UNKNOWN
+
+
 def test_stdin_flag():
     request = parse(["-s"], stdin=b"pwd\n")
     assert request.mode is InvocationMode.STDIN

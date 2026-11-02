@@ -158,18 +158,19 @@ log "演示环境准备完成。"
 cat <<EOF
 
 接下来在 VM 内部执行：
-  cd $PROJECT_DIR
-  .venv/bin/python -m sec_sandbox --preset standard
+  # --preset 把当前目录作为 workspace，所以先进入演示工作区
+  cd $WORKSPACE
+  $VENV_PY -m sec_sandbox --preset standard
 
 进入沙箱 shell 后启动 Agent（如果命令不在 PATH，使用绝对路径）：
   ~/.local/bin/claude
   # 或
   ~/.local/bin/mini -t "请阅读当前目录的 README.md，用三句话总结项目用途。"
 
-命令行拦截演示：
-  .venv/bin/python scripts/demo_attacks.py --pause
+沙箱内自动验证（进入沙箱 shell 后运行）：
+  $VENV_PY $PROJECT_DIR/scripts/demo_attacks.py --pause
 
 完整演示流程见：
-  tests/DEMO-01-沙箱演示运行指南.md
-  tests/DEMO-02-Agent诱导提示词.md
+  $PROJECT_DIR/docs/沙箱运行指南.md
+  $PROJECT_DIR/docs/Agent诱导提示词.md
 EOF

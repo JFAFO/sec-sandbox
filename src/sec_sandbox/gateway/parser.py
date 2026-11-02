@@ -7,6 +7,9 @@
 ============  =====================================================
 无参 + tty     ``INTERACTIVE``
 ``-c text``    ``COMMAND_STRING``
+``-c -l text`` ``COMMAND_STRING``（-l 是选项，text 才是命令）
+``-lc text``   ``COMMAND_STRING``（保留 login 语义，见 broker）
+``-lc`` + stdin ``STDIN``（兼容 Claude Code 的登录 shell 调用）
 脚本文件        ``SCRIPT``（读取内容，受 ``max_input_bytes`` 限制）
 ``-s``/非 tty  ``STDIN``（读取 stdin，受同一上限限制）
 ``-i``/``-l``  ``INTERACTIVE``；若同时出现 ``-c`` 则按 ``COMMAND_STRING``
@@ -79,17 +82,28 @@ def _classify(
     stdin: IO[str] | IO[bytes] | None,
 ) -> tuple[InvocationMode, str | None, Path | None]:
     index = 0
+    command_flag = False
+    allow_stdin = False
+
     while index < len(args):
         arg = args[index]
         if arg == "--" or arg == "-":
             index += 1
             break
         if not arg.startswith("-"):
-            break  # 第一个非选项参数即脚本
+            break  # 第一个非选项参数即命令文本或脚本
         if arg == "-c":
-            if index + 1 >= len(args):
-                raise ParseError("-c 缺少命令文本")
-            return InvocationMode.COMMAND_STRING, args[index + 1], None
+            # ``-c`` 本身是标志；命令文本在后续第一个非选项参数。
+            # 例如 ``bash -c -l "cmd"`` 中 ``-l`` 仍是选项，不是命令。
+            command_flag = True
+            index += 1
+            continue
+        if _is_command_flag(arg):
+            # Claude Code 的 Bash 工具会使用 ``-lc`` 这类组合短选项。
+            command_flag = True
+            allow_stdin = True
+            index += 1
+            continue
         if arg == "-s":
             return InvocationMode.STDIN, _read_stdin(stdin, max_input_bytes), None
         if _is_interactive_flag(arg):
@@ -99,10 +113,24 @@ def _classify(
         return InvocationMode.UNKNOWN, None, None
 
     if index < len(args):
+        if command_flag:
+            return InvocationMode.COMMAND_STRING, args[index], None
         return _read_script(args[index], cwd=cwd, limit=max_input_bytes)
+    if command_flag:
+        if allow_stdin and not stdin_is_tty:
+            return InvocationMode.STDIN, _read_stdin(stdin, max_input_bytes), None
+        raise ParseError("-c 缺少命令文本")
     if stdin_is_tty:
         return InvocationMode.INTERACTIVE, None, None
     return InvocationMode.STDIN, _read_stdin(stdin, max_input_bytes), None
+
+
+def _is_command_flag(arg: str) -> bool:
+    """识别含 ``c`` 的组合短选项，如 ``-lc``、``-ilc``。"""
+    if arg.startswith("--") or not arg.startswith("-") or len(arg) < 2:
+        return False
+    flags = arg[1:]
+    return "c" in flags and set(flags) <= {"c", "i", "l"}
 
 
 def _is_interactive_flag(arg: str) -> bool:

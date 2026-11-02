@@ -167,6 +167,38 @@ def test_allow_and_pass_executes_outer(profile):
     assert audit.events[0].decision == "allow"
 
 
+def test_login_flag_preserved_in_outer(profile):
+    broker, _, executor, _, _ = make_broker(profile)
+
+    code = broker.handle(replace(request(), argv=("-lc", "ls")))
+
+    assert code == 0
+    assert executor.calls == [("/usr/bin/real-bash", "-l", "-c", "ls")]
+
+
+def test_command_after_c_login_flag_preserved(profile):
+    broker, _, executor, _, _ = make_broker(profile)
+
+    code = broker.handle(replace(request(), argv=("-c", "-l", "ls")))
+
+    assert code == 0
+    assert executor.calls == [("/usr/bin/real-bash", "-l", "-c", "ls")]
+
+
+def test_login_flag_preserved_in_inner(profile):
+    broker, _, executor, _, _ = make_broker(profile, exec_verdict=DOWNGRADE)
+    text = "ls | grep x"
+
+    code = broker.handle(
+        replace(request(text), argv=("-lc", text))
+    )
+
+    assert code == 0
+    assert executor.calls == [
+        ("inner", "/usr/bin/real-bash", "-l", "-c", text)
+    ]
+
+
 def test_allow_and_network_deny(profile, capsys):
     broker, audit, executor, _, _ = make_broker(profile, net_verdict=NET_DENY)
 
@@ -224,7 +256,7 @@ def test_depth_limit_denied(profile):
 
 
 def test_bash_analyzer_exception_downgrades(profile):
-    broker, audit, executor, sandbox, _ = make_broker(profile, bash_error=True)
+    broker, audit, _executor, sandbox, _ = make_broker(profile, bash_error=True)
 
     assert broker.handle(request()) == 0
     assert len(sandbox.calls) == 1

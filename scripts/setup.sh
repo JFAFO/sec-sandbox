@@ -24,8 +24,6 @@ CHECK_ONLY=0
 CREATE_VENV=1
 ENABLE_LINGER=1
 WITH_TEST_TOOLS=0
-WITH_SSHFS=0
-WITH_SSH_SERVER=0
 WITH_VM_TOOLS=0
 PROJECT_DIR="${PROJECT_DIR:-$HOME/sec-sandbox}"
 BASHLEX_VERSION="${BASHLEX_VERSION:-0.18}"
@@ -58,8 +56,6 @@ usage() {
   --no-venv                 不创建 Python 虚拟环境
   --no-linger               不尝试启用 systemd linger
   --with-test-tools         额外安装 strace/bpftrace/hyperfine/capsh/tcpdump/tmux/shellcheck
-  --with-sshfs              额外安装 sshfs 与 openssh-client（开发机）
-  --with-ssh-server         额外安装并启用 openssh-server（目标虚拟机）
   --with-vm-tools           额外安装 open-vm-tools（VMware 目标机）
   -h, --help                显示本帮助
 EOF
@@ -74,8 +70,6 @@ while [ $# -gt 0 ]; do
         --no-venv)         CREATE_VENV=0; shift ;;
         --no-linger)       ENABLE_LINGER=0; shift ;;
         --with-test-tools) WITH_TEST_TOOLS=1; shift ;;
-        --with-sshfs)      WITH_SSHFS=1; shift ;;
-        --with-ssh-server) WITH_SSH_SERVER=1; shift ;;
         --with-vm-tools)   WITH_VM_TOOLS=1; shift ;;
         -h|--help)         usage; exit 0 ;;
         *)                 die "未知参数：$1（用 --help 查看用法）" ;;
@@ -216,7 +210,16 @@ check_all() {
     if have systemd-run && systemd-run --scope --user -p MemoryMax=64M -p TasksMax=32 true >/dev/null 2>&1; then
         ok "systemd-run --user 委托可用"
     else
-        err "systemd-run --user 失败；在目标机尝试 loginctl enable-linger \$USER"
+        if [ -n "${SECSAND_PROFILE:-}" ] || [ -n "${SECSAND_DEPTH:-}" ] \
+                || grep -q '^NoNewPrivs:[[:space:]]*1' /proc/self/status 2>/dev/null; then
+            err "systemd-run --user 在 sandbox 内失败（预期）；请在宿主 VM 的普通 shell 中运行 --check"
+        elif [ "$(id -u)" -eq 0 ]; then
+            err "systemd-run --user 失败：请以普通用户运行 --check，不要使用 sudo"
+        elif [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+            err "systemd-run --user 失败：当前会话缺少 XDG_RUNTIME_DIR；请在本机图形/登录会话中重试"
+        else
+            err "systemd-run --user 失败；可尝试：sudo loginctl enable-linger ${SUDO_USER:-${USER:-$(id -un)}}"
+        fi
         CHECK_FAILED=1
     fi
 
@@ -337,24 +340,16 @@ fi
 
 case "$MODE" in
     vm)
-        WITH_SSH_SERVER=1
         if [ "$VIRT" = "vmware" ]; then
             WITH_VM_TOOLS=1
         fi
         WITH_TEST_TOOLS=1
         ;;
     wsl|bare)
-        WITH_SSHFS=1
         WITH_TEST_TOOLS=1
         ;;
 esac
 
-if [ "$WITH_SSHFS" -eq 1 ]; then
-    apt_install_optional openssh-client sshfs
-fi
-if [ "$WITH_SSH_SERVER" -eq 1 ]; then
-    apt_install_optional openssh-server
-fi
 if [ "$WITH_VM_TOOLS" -eq 1 ]; then
     apt_install_optional open-vm-tools
 fi
@@ -362,14 +357,7 @@ if [ "$WITH_TEST_TOOLS" -eq 1 ]; then
     apt_install_optional strace bpftrace hyperfine tcpdump tmux shellcheck
 fi
 
-# 目标虚拟机启用 SSH
-if [ "$WITH_SSH_SERVER" -eq 1 ]; then
-    if have systemctl; then
-        $SUDO systemctl enable --now ssh 2>/dev/null || warn "启用 ssh 服务失败，请手工检查"
-    fi
-fi
-
-# systemd 用户委托：没有 linger，SSH 登录会话结束后 user manager 可能退出
+# systemd 用户委托：没有 linger，本地登录会话结束后 user manager 可能退出
 if [ "$ENABLE_LINGER" -eq 1 ] && have loginctl; then
     if $SUDO loginctl enable-linger "$TARGET_USER" 2>/dev/null; then
         ok "已为 $TARGET_USER 启用 systemd linger"

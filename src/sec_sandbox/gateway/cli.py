@@ -23,7 +23,7 @@ from ..util import logging as internal_log
 from .audit_log import AuditLog
 from .broker import Broker
 from .executor import Executor
-from .messages import INTERNAL_ERROR, message_for
+from .messages import INTERNAL_ERROR, USAGE_ERROR, message_for
 from .parser import InputTooLargeError, ParseError, parse_invocation
 
 
@@ -54,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
         return 126
     except ParseError as exc:
         internal_log.debug(f"参数解析失败：{exc}")
+        print(USAGE_ERROR, file=sys.stderr)
         return 64
 
     broker = _build_broker(profile, profile_path)

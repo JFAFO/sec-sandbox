@@ -42,6 +42,12 @@ def test_cli_python_class2(profile_file):
     assert cli_main(["-c", 'python3 -c "print(1)"']) == 0
 
 
+def test_cli_reports_usage_error(profile_file, capsys):
+    assert cli_main(["-c"]) == 64
+
+    assert "无法执行" in capsys.readouterr().err
+
+
 def test_cli_missing_profile(monkeypatch):
     monkeypatch.delenv("SECSAND_PROFILE", raising=False)
 

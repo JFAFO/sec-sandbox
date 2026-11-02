@@ -29,6 +29,10 @@ NESTING_TOO_DEEP = (
 INPUT_TOO_LARGE = (
     "[sec-sandbox] 已拦截：输入超出安全上限（类别：输入限制）。"
 )
+USAGE_ERROR = (
+    "[sec-sandbox] 无法执行：bash 调用参数不完整或无法解析，命令未执行。"
+    "请使用 bash -c '命令' 的形式。"
+)
 INTERNAL_ERROR = (
     "[sec-sandbox] 内部错误：无法安全地准备执行环境，命令未执行。"
 )
