@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from sec_sandbox.policy.presets import get_preset
 from sec_sandbox.sandbox.mounts import (
     DEFAULT_READ_BLACKLIST,
-    MountSpec,
     inner_mounts,
     outer_mounts,
 )

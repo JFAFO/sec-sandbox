@@ -28,6 +28,32 @@ python3 -m venv .venv
 ./scripts/setup.sh --check
 ```
 
+## 运行
+
+```bash
+# 沙箱自检（不启动）
+bin/sandbox --check
+
+# 预设启动（跳过 TUI）
+bin/sandbox --preset standard
+
+# 已有 profile 启动
+bin/sandbox --profile ~/.config/sandbox/profile.json
+
+# 网关（外层 bwrap 内被绑定为 /usr/bin/bash）
+SECSAND_PROFILE=~/.config/sandbox/profile.json bin/safe-exec -c 'ls'
+```
+
+`setup.sh` 安装模式会创建 `/usr/bin/real-bash`（真 bash 备份），这是外层 bwrap 的部署前提。
+
+## 测试
+
+```bash
+pytest -m "not kernel"   # WSL/开发机
+pytest -m kernel         # Ubuntu 22.04 VM（内核黑盒）
+pytest tests/e2e         # 恶意/正常用例集与指标
+```
+
 ## 目录
 
 - `src/sec_sandbox/`：源码（`contracts`、`policy`、`bash_audit`、`python_audit`、`netpolicy`、`gateway`、`sandbox`、`frontend`）

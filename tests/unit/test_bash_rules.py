@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from sec_sandbox.bash_audit.analyzer import BashAnalyzer
