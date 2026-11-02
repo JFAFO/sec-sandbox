@@ -1,0 +1,15 @@
+# 课程设计文档与日志：不随代码仓库提交（2026-11-02 约定）
+/design/
+/logs/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+*.log

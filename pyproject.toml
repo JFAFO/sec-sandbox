@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sec-sandbox"
+version = "0.1.0"
+description = "面向大模型智能体的命令执行行为管控系统"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "bashlex==0.18",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7",
+    "hypothesis>=6",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "kernel: 需要真实 Linux 内核能力的测试（仅在目标 VM 运行）",
+]
