@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+"""网关入口：在 bwrap 内替换 /usr/bin/bash。"""
+
+from sec_sandbox.gateway.cli import main
+
+if __name__ == "__main__":
+    raise SystemExit(main())

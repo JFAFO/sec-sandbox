@@ -70,7 +70,9 @@ def test_outer_argv(env):
     assert ("--ro-bind", "/", "/") in triples(args)
     assert ("--proc", "/proc") in pairs(args)
     assert ("--dev", "/dev") in pairs(args)
-    assert ("--tmpfs", "/tmp") in pairs(args)
+    assert ("--size", str(profile.filesystem.tmp_size_bytes), "--tmpfs", "/tmp") in {
+        tuple(args[index : index + 4]) for index in range(len(args) - 3)
+    }
     assert ("--bind", str(work), str(work)) in triples(args)
     assert ("--bind", str(home / ".claude"), str(home / ".claude")) in triples(args)
     assert ("--bind", str(home / ".claude.json"), str(home / ".claude.json")) in triples(args)

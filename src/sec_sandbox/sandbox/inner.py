@@ -69,7 +69,12 @@ def build_inner(
 
 
 def _tmpfs_args(profile: Profile) -> tuple[str, ...]:
-    args = ["--tmpfs", "/tmp"]
+    # bwrap 要求 --size 紧邻其后的 --tmpfs
     if profile.filesystem.tmp_size_bytes > 0:
-        args.extend(("--size", str(profile.filesystem.tmp_size_bytes)))
-    return tuple(args)
+        return (
+            "--size",
+            str(profile.filesystem.tmp_size_bytes),
+            "--tmpfs",
+            "/tmp",
+        )
+    return ("--tmpfs", "/tmp")

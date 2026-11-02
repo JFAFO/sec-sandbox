@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+"""配置前端入口：自检、TUI、写 profile 并 exec bwrap。"""
+
+from sec_sandbox.frontend.app import main
+
+if __name__ == "__main__":
+    raise SystemExit(main())

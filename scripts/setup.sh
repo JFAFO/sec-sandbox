@@ -191,6 +191,13 @@ check_all() {
             err "嵌套 bwrap 失败（类 3 无法执行）"
             CHECK_FAILED=1
         fi
+
+        # 外层 bwrap 会把真 bash 绑定到已有文件 /usr/bin/real-bash
+        if [ -e /usr/bin/real-bash ]; then
+            ok "真 bash 备份：/usr/bin/real-bash"
+        else
+            warn "缺少 /usr/bin/real-bash；安装模式会创建（外层 bwrap 必需）"
+        fi
     fi
 
     # 4. cgroup v2 统一层级
@@ -311,6 +318,16 @@ else
 fi
 
 apt_install "${BASE_PKGS[@]}"
+
+# 真 bash 备份：外层 bwrap 需要把 real-bash 绑定到已存在的目标文件
+REAL_BASH_TARGET="/usr/bin/real-bash"
+if [ ! -e "$REAL_BASH_TARGET" ]; then
+    BASH_SOURCE="$(readlink -f /usr/bin/bash 2>/dev/null || readlink -f /bin/bash)"
+    $SUDO ln -s "$BASH_SOURCE" "$REAL_BASH_TARGET"
+    ok "已创建真 bash 备份：$REAL_BASH_TARGET -> $BASH_SOURCE"
+else
+    ok "真 bash 备份已存在：$REAL_BASH_TARGET"
+fi
 
 case "$MODE" in
     vm)

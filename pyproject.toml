@@ -13,6 +13,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+frontend = [
+    "textual>=0.80",
+]
 test = [
     "pytest>=7",
     "hypothesis>=6",
