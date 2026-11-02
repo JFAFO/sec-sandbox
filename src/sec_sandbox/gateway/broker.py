@@ -241,7 +241,7 @@ class Broker:
         plan: LaunchPlan = self.sandbox.build_inner(
             self.profile,
             InnerLaunchRequest(
-                shell_argv=_shell_argv(req, self.real_bash),
+                shell_argv=_shell_args(req),
                 cwd=req.cwd,
                 depth=req.depth + 1,
             ),
@@ -362,12 +362,17 @@ def _parse_request(req: CommandRequest) -> ParsedBash:
     return parse(req.command_text)
 
 
-def _shell_argv(req: CommandRequest, real_bash: str) -> tuple[str, ...]:
+def _shell_args(req: CommandRequest) -> tuple[str, ...]:
+    """交给 real-bash 的参数（不含 real-bash 自身，§4.6）。"""
     if req.mode is InvocationMode.SCRIPT and req.script_path is not None:
-        return (real_bash, str(req.script_path))
+        return (str(req.script_path),)
     if req.mode is InvocationMode.UNKNOWN:
-        return (real_bash, *req.argv)
-    return (real_bash, "-c", req.command_text or "")
+        return tuple(req.argv)
+    return ("-c", req.command_text or "")
+
+
+def _shell_argv(req: CommandRequest, real_bash: str) -> tuple[str, ...]:
+    return (real_bash, *_shell_args(req))
 
 
 def _python_source(

@@ -79,7 +79,7 @@ class FakeSandbox:
         if self.error:
             raise RuntimeError("sandbox boom")
         self.calls.append(req)
-        return LaunchPlan(argv=("inner", *req.shell_argv))
+        return LaunchPlan(argv=("inner", "/usr/bin/real-bash", *req.shell_argv))
 
     def build_cgroup(self, plan, limits):
         return plan

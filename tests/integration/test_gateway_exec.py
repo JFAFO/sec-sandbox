@@ -31,7 +31,7 @@ class FakeSandbox:
 
     def build_inner(self, profile, req):
         self.calls.append(req)
-        return LaunchPlan(argv=req.shell_argv)
+        return LaunchPlan(argv=("/bin/bash", *req.shell_argv))
 
     def build_cgroup(self, plan, limits):
         return plan
