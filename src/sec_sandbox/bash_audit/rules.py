@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import os
 import posixpath
-import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,7 +23,12 @@ from ..policy.builtin.bash_high_risk import (
 )
 from ..policy.builtin.sensitive_paths import SENSITIVE_PATH_PATTERNS
 from ..policy.builtin.whitelist import BASH_BUILTINS, DEFAULT_UTILITY_WHITELIST
-from ..util.paths import is_sensitive_path, is_under, match_sensitive_pattern
+from ..util.paths import (
+    expand_word_path,
+    is_sensitive_path,
+    is_under,
+    match_sensitive_pattern,
+)
 from .astutil import command_argv, walk, word_text
 from .classifier import classify
 
@@ -32,9 +36,6 @@ if TYPE_CHECKING:
     from ..policy.models import Profile
 
 _DEFAULT_TRUSTED_PATH = (Path("/usr/local/bin"), Path("/usr/bin"), Path("/bin"))
-
-# 只匹配独立的 $HOME；$HOMELESS 之类的变量名不得被误展开
-_HOME_VAR_RE = re.compile(r"\$\{HOME\}|\$HOME(?![A-Za-z0-9_])")
 
 
 @dataclass(frozen=True)
@@ -209,21 +210,4 @@ def _check_write_targets(
 
 
 def _expand_word(raw: str | None, ctx: AuditContext) -> Path | None:
-    """把词展开为绝对路径；含无法静态求值的变量时返回 ``None``。"""
-    if not raw:
-        return None
-
-    if raw.startswith("~"):
-        if raw != "~" and not raw.startswith("~/"):
-            return None
-        text = str(ctx.home) + raw[1:]
-    else:
-        text = _HOME_VAR_RE.sub(str(ctx.home), raw)
-
-    if "$" in text or "`" in text:
-        return None
-
-    path = Path(text)
-    if not path.is_absolute():
-        path = ctx.cwd / path
-    return Path(os.path.realpath(path))
+    return expand_word_path(raw, cwd=ctx.cwd, home=ctx.home)

@@ -43,6 +43,13 @@ _NETWORK_MODULES = frozenset({"socket", "urllib", "requests", "http.client"})
 _DENY_OPTS = frozenset({"-S", "-E", "-I"})
 
 
+class PythonStaticAuditor:
+    """``PythonAuditor`` Protocol 的静态实现。"""
+
+    def analyze_source(self, source: str, ctx: AuditContext) -> AuditVerdict:
+        return analyze_source(source, ctx)
+
+
 def is_python_invocation(argv: Sequence[str], profile: Profile) -> bool:
     """argv 是否为允许的类 2 调用（解释器 realpath 在允许列表且形式合规）。"""
     if not argv:

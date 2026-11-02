@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import re
 from collections.abc import Iterable
 from pathlib import Path
 
 _HOME_PREFIX = "$HOME"
+_HOME_VAR_RE = re.compile(r"\$\{HOME\}|\$HOME(?![A-Za-z0-9_])")
 
 
 def expand_path(raw: str | os.PathLike[str]) -> Path:
@@ -71,6 +73,27 @@ def is_under(path: str | os.PathLike[str], root: str | os.PathLike[str]) -> bool
     candidate = canonicalize(path)
     base = canonicalize(root)
     return candidate == base or base in candidate.parents
+
+
+def expand_word_path(raw: str | None, *, cwd: Path, home: Path) -> Path | None:
+    """把命令中的词展开为绝对路径；含未知变量/命令替换时返回 ``None``。"""
+    if not raw:
+        return None
+
+    if raw.startswith("~"):
+        if raw != "~" and not raw.startswith("~/"):
+            return None
+        text = str(home) + raw[1:]
+    else:
+        text = _HOME_VAR_RE.sub(str(home), raw)
+
+    if "$" in text or "`" in text:
+        return None
+
+    path = Path(text)
+    if not path.is_absolute():
+        path = cwd / path
+    return Path(os.path.realpath(path))
 
 
 def _expand_pattern(pattern: str) -> str:
