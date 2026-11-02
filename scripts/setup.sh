@@ -385,11 +385,19 @@ if [ "$CREATE_VENV" -eq 1 ]; then
         log "虚拟环境已存在，复用"
     fi
     "$PROJECT_DIR/.venv/bin/python" -m pip install --upgrade pip >/dev/null
-    log "安装运行时/测试依赖：bashlex==$BASHLEX_VERSION、pytest、hypothesis"
-    "$PROJECT_DIR/.venv/bin/pip" install "bashlex==$BASHLEX_VERSION" pytest hypothesis >/dev/null
+    log "安装运行时/测试依赖：bashlex==$BASHLEX_VERSION、pytest、hypothesis、textual"
+    "$PROJECT_DIR/.venv/bin/pip" install "bashlex==$BASHLEX_VERSION" pytest hypothesis "textual>=0.80" >/dev/null \
+        || die "Python 依赖安装失败"
     if [ -f "$PROJECT_DIR/pyproject.toml" ]; then
         log "以可编辑模式安装项目本身"
         "$PROJECT_DIR/.venv/bin/pip" install -e "$PROJECT_DIR"
+        # 通过 sudo 运行时 venv 属于 root；交还给目标用户，便于后续 pip 更新。
+        if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
+            log "把 venv 与构建产物所有权交还给 $TARGET_USER"
+            chown -R "$TARGET_USER:$TARGET_USER" "$PROJECT_DIR/.venv"
+            find "$PROJECT_DIR" -maxdepth 2 -name '*.egg-info' \
+                -exec chown -R "$TARGET_USER:$TARGET_USER" {} + 2>/dev/null || true
+        fi
     else
         warn "未找到 $PROJECT_DIR/pyproject.toml，跳过项目安装"
         warn "仓库骨架就绪后，重新执行本脚本或：$PROJECT_DIR/.venv/bin/pip install -e $PROJECT_DIR"
