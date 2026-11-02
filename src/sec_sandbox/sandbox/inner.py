@@ -25,6 +25,7 @@ def build_inner(
     paths: RuntimePaths | None = None,
     seccomp_fd: int | None = None,
     defaults: Sequence[tuple[str, str]] = DEFAULT_READ_BLACKLIST,
+    supports_tmp_size: bool = True,
 ) -> LaunchPlan:
     """生成内层 bwrap argv；``shell_argv`` 不含 real-bash 自身。"""
     runtime = paths if paths is not None else probe_paths(profile)
@@ -48,7 +49,7 @@ def build_inner(
         "--dev",
         "/dev",
     ]
-    args.extend(_tmpfs_args(profile))
+    args.extend(_tmpfs_args(profile, supports_tmp_size))
     args.extend(inner_mounts(profile, runtime, defaults=defaults).args)
 
     for executable in profile.inner.masked_executables:
@@ -68,9 +69,9 @@ def build_inner(
     return LaunchPlan(argv=tuple(args), pass_fds=pass_fds)
 
 
-def _tmpfs_args(profile: Profile) -> tuple[str, ...]:
-    # bwrap 要求 --size 紧邻其后的 --tmpfs
-    if profile.filesystem.tmp_size_bytes > 0:
+def _tmpfs_args(profile: Profile, supports_size: bool) -> tuple[str, ...]:
+    # bwrap 要求 --size 紧邻其后的 --tmpfs；0.6.1 不认识 --size，降级为普通 tmpfs。
+    if supports_size and profile.filesystem.tmp_size_bytes > 0:
         return (
             "--size",
             str(profile.filesystem.tmp_size_bytes),

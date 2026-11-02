@@ -180,3 +180,38 @@ def test_inner_rejects_missing_profile(env, tmp_path):
             InnerLaunchRequest(shell_argv=("-c", "ls"), cwd=work, depth=0),
             profile_path=tmp_path / "nope.json",
         )
+
+
+def test_outer_without_tmp_size_support(env):
+    """bwrap 0.6.1 不认识 --size，应降级为普通 --tmpfs /tmp。"""
+    profile, _, _, profile_file, safe_exec, _ = env
+    runtime = probe_paths(profile)
+
+    plan = build_outer(
+        profile,
+        profile_file,
+        safe_exec=safe_exec,
+        paths=runtime,
+        defaults=(),
+        supports_tmp_size=False,
+    )
+
+    assert "--size" not in plan.argv
+    assert ("--tmpfs", "/tmp") in pairs(plan.argv)
+
+
+def test_inner_without_tmp_size_support(env):
+    profile, _, work, profile_file, _, _ = env
+    runtime = probe_paths(profile)
+
+    plan = build_inner(
+        profile,
+        InnerLaunchRequest(shell_argv=("-c", "ls"), cwd=work, depth=0),
+        profile_path=profile_file,
+        paths=runtime,
+        defaults=(),
+        supports_tmp_size=False,
+    )
+
+    assert "--size" not in plan.argv
+    assert ("--tmpfs", "/tmp") in pairs(plan.argv)

@@ -322,9 +322,10 @@ apt_install "${BASE_PKGS[@]}"
 # 真 bash 备份：外层 bwrap 需要把 real-bash 绑定到已存在的目标文件
 REAL_BASH_TARGET="/usr/bin/real-bash"
 if [ ! -e "$REAL_BASH_TARGET" ]; then
-    BASH_SOURCE="$(readlink -f /usr/bin/bash 2>/dev/null || readlink -f /bin/bash)"
-    $SUDO ln -s "$BASH_SOURCE" "$REAL_BASH_TARGET"
-    ok "已创建真 bash 备份：$REAL_BASH_TARGET -> $BASH_SOURCE"
+    # 不能命名为 BASH_SOURCE：它是 bash 的只读特殊变量，赋值会让 set -e 静默退出。
+    BASH_REAL="$(readlink -f /usr/bin/bash 2>/dev/null || readlink -f /bin/bash)"
+    $SUDO ln -s "$BASH_REAL" "$REAL_BASH_TARGET"
+    ok "已创建真 bash 备份：$REAL_BASH_TARGET -> $BASH_REAL"
 else
     ok "真 bash 备份已存在：$REAL_BASH_TARGET"
 fi

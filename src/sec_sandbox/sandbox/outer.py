@@ -20,6 +20,7 @@ def build_outer(
     paths: RuntimePaths | None = None,
     seccomp_fd: int | None = None,
     defaults: Sequence[tuple[str, str]] = DEFAULT_READ_BLACKLIST,
+    supports_tmp_size: bool = True,
 ) -> LaunchPlan:
     """生成本体层 bwrap argv；真 bash 备份为 ``/usr/bin/real-bash``。"""
     runtime = paths if paths is not None else probe_paths(profile)
@@ -47,7 +48,7 @@ def build_outer(
         "--dev",
         "/dev",
     ]
-    args.extend(_tmpfs_args(profile))
+    args.extend(_tmpfs_args(profile, supports_tmp_size))
     args.extend(outer_mounts(profile, runtime, defaults=defaults).args)
     args.extend(("--ro-bind", str(runtime.real_bash), "/usr/bin/real-bash"))
 
@@ -69,9 +70,9 @@ def build_outer(
     return LaunchPlan(argv=tuple(args), pass_fds=pass_fds)
 
 
-def _tmpfs_args(profile: Profile) -> tuple[str, ...]:
-    # bwrap 要求 --size 紧邻其后的 --tmpfs
-    if profile.filesystem.tmp_size_bytes > 0:
+def _tmpfs_args(profile: Profile, supports_size: bool) -> tuple[str, ...]:
+    # bwrap 要求 --size 紧邻其后的 --tmpfs；0.6.1 不认识 --size，降级为普通 tmpfs。
+    if supports_size and profile.filesystem.tmp_size_bytes > 0:
         return (
             "--size",
             str(profile.filesystem.tmp_size_bytes),
